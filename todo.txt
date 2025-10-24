@@ -1,0 +1,81 @@
+@startuml
+skinparam ClassAttributeIconStyle relevant
+skinparam defaultFontName sans-serif
+
+' クラス定義
+class Player {
+  - hp: int
+  - current_map: string
+  - location_x: int
+  - location_y: int
+  --
+  + move(direction: string)
+  + decreaseHp(damage: int)
+  + isDefeated(): boolean
+}
+
+class Map {
+  - map_id: string
+  - locations: Location[]
+  --
+  + getLocationAt(x: int, y: int): Location/null
+  + changeMap(new_map_id: string): Map
+}
+
+abstract class Location {
+  - name: string
+  --
+  + onEnter(player: Player)
+}
+
+class Facility extends Location {
+  --
+  + provideService(player: Player)
+}
+
+class Monster {
+  - name: string
+  - question: Question
+  - symbol_x: int, symbol_y: int
+  - is_defeated: boolean
+  --
+  + startBattle(player: Player)
+}
+
+class Question {
+  - problem_text: string
+  - correct_answer: string
+  - damage_on_failure: int
+  --
+  + checkAnswer(answer: string): boolean
+}
+
+class GameController {
+  - player: Player
+  - current_map: Map
+  - frontend_ui: FrontendUI
+  --
+  + handleMove(direction: string)
+  + startBattle(monster: Monster)
+  + submitAnswer(answer: string)
+  + updateUI()
+}
+
+interface FrontendUI {
+  + renderMap(map_data: MapData)
+  + renderBattle(battle_data: BattleData)
+  + get_user_input(): string
+}
+
+' 関連
+Player "1" -- "1" GameController : 制御対象とする
+Map "1" -- "1" GameController : 制御対象とする
+GameController "1" -- "1" FrontendUI : UI操作を依頼
+Map "1" *-- "*" Location : 構成要素
+Location <|-- Facility : 継承
+Location "1" -- "1" Monster : (戦闘地点として扱われる)
+Monster "1" -- "1" Question : 出題する
+GameController "1" -- "1" Monster : 戦闘開始時に関連
+GameController "1" -- "1" Question : 回答処理時に関連
+
+@enduml
