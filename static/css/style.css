@@ -180,3 +180,68 @@ html, body {
 }
 
 /* ( ... スタート画面のスタイルはすべて削除 ... ) */
+/* --- スタート画面のスタイル (ドット絵風・全体表示) --- */
+@font-face {
+    font-family: 'DotGothic16';
+    src: url('../assets/fonts/DotGothic16-Regular.ttf') format('truetype');
+}
+
+/* スタート画面の「基本設定」 (レイアウト以外) */
+#start-screen {
+    /* 全体表示のための設定 */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 100;
+    padding: 0;
+    box-sizing: border-box;
+
+    /* 背景とフォント */
+    background-image: url('../assets/start_bg.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: white;
+    font-family: 'DotGothic16', sans-serif;
+    text-align: center;
+}
+
+/* スタート画面が「表示されている時」のレイアウト */
+#start-screen.active {
+    display: flex !important; /* 画面を表示 */
+    flex-direction: column;  /* 縦に並べる */
+    justify-content: center; /* 垂直方向に中央揃え */
+    align-items: center;   /* 水平方向に中央揃え */
+}
+
+#start-screen h2 {
+    font-size: 3.5em;
+    color: white;
+    text-shadow: 4px 4px 0px #000;
+    margin-bottom: 20px;
+    letter-spacing: 0.1em;
+}
+#start-screen p {
+    font-size: 1.2em;
+    margin-bottom: 40px;
+    text-shadow: 2px 2px 0px #000;
+}
+#start-game-button {
+    padding: 18px 40px;
+    font-size: 1.5em;
+    background-color: #007bff;
+    color: white;
+    border: 4px solid #000;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.1s;
+    box-shadow: 6px 6px 0px #000;
+    font-family: 'DotGothic16', sans-serif;
+}
+#start-game-button:hover {
+    background-color: #0056b3;
+    transform: translate(2px, 2px);
+    box-shadow: 4px 4px 0px #000;
+}

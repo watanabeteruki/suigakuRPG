@@ -3,8 +3,14 @@
 let isMoving = false; // 移動中フラグ (ラグ防止)
 
 /**
- * ( setBattleControlsEnabled は削除 )
+ * 戦闘コマンドの有効/無効を切り替える
  */
+function setBattleControlsEnabled(enabled) {
+    document.getElementById('action-attack').disabled = !enabled;
+    document.getElementById('action-flee').disabled = !enabled;
+    document.getElementById('answer-input').disabled = !enabled;
+    document.getElementById('submit-answer').disabled = !enabled;
+}
 
 /**
  * バックエンドAPIへのリクエストを行うヘルパー関数
@@ -41,7 +47,7 @@ async function handleMove(direction) {
     if (result) {
         if (result.status === 'battle') {
             UIRenderer.renderBattle(result);
-            // ( setBattleControlsEnabled(true) は削除 )
+            setBattleControlsEnabled(true); 
         } else if (result.status === 'moved') {
             UIRenderer.renderMap(result.game_state);
         }
@@ -55,11 +61,17 @@ async function handleMove(direction) {
  */
 async function initializeGame() {
     // 1. 初期状態の取得と描画
+    // (注: サーバーがクラッシュすると、ここで initialState が null になる)
     const initialState = await fetch('/api/status').then(res => res.json());
     if (initialState) {
         UIRenderer.renderMap(initialState);
-        // ▼ 修正: 起動時にマップ画面を表示する ▼
-        UIRenderer.switchScreen('map');
+        // ▼ 修正: 起動時のマップ画面表示を「削除」 ▼
+        // UIRenderer.switchScreen('map'); 
+    }
+
+    if (localStorage.getItem('gameStarted') === 'true' && initialState) {
+        // スタート画面を飛ばして、すぐにマップ画面に切り替える
+        UIRenderer.switchScreen('map');
     }
 
     // 2. マップ操作ボタンのイベントリスナー設定
@@ -74,7 +86,7 @@ async function initializeGame() {
 
     // 3. キーボードイベントリスナーの設定
     document.addEventListener('keydown', (event) => {
-        // ▼ 修正: マップ画面 "以外" ではキー操作を無視 ▼
+        // ▼ 修正: "start-screen" が active な時もキー操作を無視する ▼
         if (!UIRenderer.mapScreen.classList.contains('active')) {
             return;
         }
@@ -118,19 +130,19 @@ async function initializeGame() {
             UIRenderer.updateBattleMessage(result.message); 
 
             if (result.status === 'game_over') {
-                // ( setBattleControlsEnabled(false) は削除 )
+                setBattleControlsEnabled(false);
                 setTimeout(async () => {
                     alert("ゲームオーバー...。初期状態に戻ります。");
                     const resetState = await callApi('/api/reset', {});
                     UIRenderer.renderMap(resetState);
-                    UIRenderer.switchScreen('map');
+                    UIRenderer.switchScreen('map'); // 👈 戦闘終了バグ修正
                 }, 2000);
             
             } else if (result.status === 'battle_win' || result.status === 'battle_end') {
-                // ( setBattleControlsEnabled(false) は削除 )
+                setBattleControlsEnabled(false);
                 setTimeout(() => {
                     UIRenderer.renderMap(result.game_state);
-                    UIRenderer.switchScreen('map');
+                    UIRenderer.switchScreen('map'); // 👈 戦闘終了バグ修正
                 }, 2000);
             }
         }
@@ -139,16 +151,21 @@ async function initializeGame() {
     document.getElementById('action-flee').addEventListener('click', async () => {
         const result = await callApi('/api/battle/action', { action: 'にげる' });
         if (result) {
-            // ( setBattleControlsEnabled(false) は削除 )
+            setBattleControlsEnabled(false);
             UIRenderer.updateBattleMessage(result.message);
             setTimeout(() => {
                 UIRenderer.renderMap(result.game_state);
-                UIRenderer.switchScreen('map');
+                UIRenderer.switchScreen('map'); // 👈 戦闘終了バグ修正
             }, 2000);
         }
     });
 
-    // ( 5. スタートボタンのリスナーは削除 )
+    // ▼ 5. スタートボタンのイベントリスナー設定 ▼
+    // (ここが 'map' 以外になっていたらバグです)
+    document.getElementById('start-game-button').addEventListener('click', () => {
+        localStorage.setItem('gameStarted', 'true');
+        UIRenderer.switchScreen('map');
+    });
 
 } 
 
