@@ -1,9 +1,2 @@
-# requirements.txt
-#
-# スイガクRPGのPythonバックエンド（app/）が依存するライブラリを記述します。
-
-# Webフレームワーク: HTTPリクエストのルーティングと処理に使用
-Flask==3.0.3 
-
-# GunicornやuWSGIなど、本番環境で使うWebサーバーゲートウェイインターフェースも追加できます
+Flask==3.0.3
 # gunicorn==20.1.0

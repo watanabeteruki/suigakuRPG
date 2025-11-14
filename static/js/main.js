@@ -1,10 +1,13 @@
 // static/js/main.js
 
+let isMoving = false; // 移動中フラグ (ラグ防止)
+
+/**
+ * ( setBattleControlsEnabled は削除 )
+ */
+
 /**
  * バックエンドAPIへのリクエストを行うヘルパー関数
- * @param {string} endpoint - APIエンドポイントのパス (例: /api/move)
- * @param {object} data - 送信するデータ
- * @returns {Promise<object>} APIレスポンスデータ
  */
 async function callApi(endpoint, data = {}) {
     const response = await fetch(endpoint, {
@@ -27,20 +30,24 @@ async function callApi(endpoint, data = {}) {
 
 /**
  * キーボードまたはボタン操作に基づいて移動を処理する関数。
- * @param {string} direction - 'up', 'down', 'left', 'right'
  */
 async function handleMove(direction) {
+    
+    if (isMoving) return; 
+    isMoving = true; 
+
     const result = await callApi('/api/move', { direction: direction });
     
     if (result) {
         if (result.status === 'battle') {
-            // モンスターと接触 -> 戦闘画面へ
             UIRenderer.renderBattle(result);
+            // ( setBattleControlsEnabled(true) は削除 )
         } else if (result.status === 'moved') {
-            // 移動のみ -> マップ更新
             UIRenderer.renderMap(result.game_state);
         }
     }
+    
+    isMoving = false; 
 }
 
 /**
@@ -51,6 +58,8 @@ async function initializeGame() {
     const initialState = await fetch('/api/status').then(res => res.json());
     if (initialState) {
         UIRenderer.renderMap(initialState);
+        // ▼ 修正: 起動時にマップ画面を表示する ▼
+        UIRenderer.switchScreen('map');
     }
 
     // 2. マップ操作ボタンのイベントリスナー設定
@@ -65,41 +74,25 @@ async function initializeGame() {
 
     // 3. キーボードイベントリスナーの設定
     document.addEventListener('keydown', (event) => {
-        // 現在マップ画面が表示されているか確認
+        // ▼ 修正: マップ画面 "以外" ではキー操作を無視 ▼
         if (!UIRenderer.mapScreen.classList.contains('active')) {
-            return; // 戦闘画面など、他の画面ではキー操作を無視
+            return;
         }
         
         let direction = null;
-
-        // キー名で判定 (ArrowキーとWASDキー)
         switch (event.key) {
-            case 'ArrowUp':
-            case 'w':
-            case 'W':
-                direction = 'up';
-                break;
-            case 'ArrowDown':
-            case 's':
-            case 'S':
-                direction = 'down';
-                break;
-            case 'ArrowLeft':
-            case 'a':
-            case 'A':
-                direction = 'left';
-                break;
-            case 'ArrowRight':
-            case 'd':
-            case 'D':
-                direction = 'right';
-                break;
+            case 'ArrowUp': case 'w': case 'W':
+                direction = 'up'; break;
+            case 'ArrowDown': case 's': case 'S':
+                direction = 'down'; break;
+            case 'ArrowLeft': case 'a': case 'A':
+                direction = 'left'; break;
+            case 'ArrowRight': case 'd': case 'D':
+                direction = 'right'; break;
         }
 
         if (direction) {
-            // デフォルトのブラウザ動作（スクロールなど）を抑制
             event.preventDefault(); 
-            // 移動処理を実行
             handleMove(direction);
         }
     });
@@ -108,7 +101,7 @@ async function initializeGame() {
     document.getElementById('submit-answer').addEventListener('click', async () => {
         const answerInput = document.getElementById('answer-input');
         const answer = answerInput.value.trim();
-        answerInput.value = ''; // 入力欄をクリア
+        answerInput.value = ''; 
         
         if (answer === '') {
             UIRenderer.updateBattleMessage('回答を入力してください！');
@@ -124,26 +117,40 @@ async function initializeGame() {
             UIRenderer.updatePlayerStatus(result.game_state.player); 
             UIRenderer.updateBattleMessage(result.message); 
 
-            if (result.status === 'battle_win' || result.status === 'game_over' || result.status === 'battle_end') {
-                // 勝利・敗北・逃走の場合、少し待ってマップ画面に戻る
+            if (result.status === 'game_over') {
+                // ( setBattleControlsEnabled(false) は削除 )
+                setTimeout(async () => {
+                    alert("ゲームオーバー...。初期状態に戻ります。");
+                    const resetState = await callApi('/api/reset', {});
+                    UIRenderer.renderMap(resetState);
+                    UIRenderer.switchScreen('map');
+                }, 2000);
+            
+            } else if (result.status === 'battle_win' || result.status === 'battle_end') {
+                // ( setBattleControlsEnabled(false) は削除 )
                 setTimeout(() => {
                     UIRenderer.renderMap(result.game_state);
+                    UIRenderer.switchScreen('map');
                 }, 2000);
             }
         }
     });
 
-    // 逃げるボタンの処理
     document.getElementById('action-flee').addEventListener('click', async () => {
         const result = await callApi('/api/battle/action', { action: 'にげる' });
         if (result) {
+            // ( setBattleControlsEnabled(false) は削除 )
             UIRenderer.updateBattleMessage(result.message);
             setTimeout(() => {
                 UIRenderer.renderMap(result.game_state);
+                UIRenderer.switchScreen('map');
             }, 2000);
         }
     });
-}
+
+    // ( 5. スタートボタンのリスナーは削除 )
+
+} 
 
 // ページロード時にゲームを開始
 document.addEventListener('DOMContentLoaded', initializeGame);
