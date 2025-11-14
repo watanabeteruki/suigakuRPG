@@ -65,13 +65,9 @@ async function initializeGame() {
     const initialState = await fetch('/api/status').then(res => res.json());
     if (initialState) {
         UIRenderer.renderMap(initialState);
+        
         // ▼ 修正: 起動時のマップ画面表示を「削除」 ▼
         // UIRenderer.switchScreen('map'); 
-    }
-
-    if (localStorage.getItem('gameStarted') === 'true' && initialState) {
-        // スタート画面を飛ばして、すぐにマップ画面に切り替える
-        UIRenderer.switchScreen('map');
     }
 
     // 2. マップ操作ボタンのイベントリスナー設定
@@ -163,7 +159,6 @@ async function initializeGame() {
     // ▼ 5. スタートボタンのイベントリスナー設定 ▼
     // (ここが 'map' 以外になっていたらバグです)
     document.getElementById('start-game-button').addEventListener('click', () => {
-        localStorage.setItem('gameStarted', 'true');
         UIRenderer.switchScreen('map');
     });
 
