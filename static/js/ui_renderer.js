@@ -32,14 +32,15 @@ const UIRenderer = {
 
     renderMap(gameState) {
         // ▼ 修正: background_image を受け取らない ▼
-        const { player, monsters } = gameState;
+        const { player, monsters, background_image } = gameState;
         
         this.updatePlayerStatus(player);
 
-        // ▼ 修正: マップ背景画像の動的切り替えを「削除」 ▼
-        // (CSS側で固定で設定されるため、JSでの操作は不要)
-
         this.mapGrid.innerHTML = '';
+
+        if (background_image) {
+            this.mapGrid.style.backgroundImage = `url('assets/${background_image}')`;
+        }
         
         const playerIcon = document.createElement('div');
         playerIcon.classList.add('player');

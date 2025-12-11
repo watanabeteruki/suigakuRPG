@@ -33,7 +33,7 @@ class GameController:
             "player": self.player.get_status(),
             "current_map_id": self.current_map.map_id,
             "monsters": active_monsters,
-            # (background_image の送信を削除)
+            "background_image": self.current_map.image_file,
         }
 
     def handle_move(self, direction: str) -> Dict:
@@ -70,6 +70,23 @@ class GameController:
                 # (マップ移動ロジックは無効化)
                 if entity.get("type") == "service":
                     self.player.heal(5)
+
+                elif entity.get("type") == "transition":
+                    # 1. 移動先のマップIDと座標を取得
+                    target_map_id = entity["target_map"]
+                    target_x = entity["target_x"]
+                    target_y = entity["target_y"]
+
+                    # 2. プレイヤー情報を更新
+                    self.player.current_map = target_map_id
+                    self.player.location_x = target_x
+                    self.player.location_y = target_y
+
+                    # 3. コントローラーの現在のマップ情報を更新
+                    self.current_map = self.maps[target_map_id]
+
+                    # 4. 新しいマップの状態を返す
+                    return {"status": "moved", "game_state": self._get_game_state()}
 
         return {"status": "moved", "game_state": self._get_game_state()}
 

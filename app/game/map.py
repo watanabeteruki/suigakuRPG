@@ -69,17 +69,57 @@ class Map:
             map_id="town",
             width=20,
             height=15,
-            image_file="kenrokuen_map.png",  # 👈 兼六園マップを「町」として使う
+            image_file="kenrokuen_map.png",
             monsters=[m1, m2],
             facilities=[
                 # ▼ マップ移動に関する記述を削除 ▼
                 {"name": "アイテム屋", "x": 12, "y": 5, "type": "service"},
+                {
+                    "name": "金沢城へ",
+                    "x": 18,
+                    "y": 1,
+                    "type": "transition",
+                    "target_map": "castle",
+                    "target_x": 2,
+                    "target_y": 13,
+                },
+                # ゲートが広い場合は横にもう一つ判定を置くと親切です
+                {
+                    "name": "金沢城へ",
+                    "x": 17,
+                    "y": 1,
+                    "type": "transition",
+                    "target_map": "castle",
+                    "target_x": 2,
+                    "target_y": 13,
+                },
+            ],
+        )
+
+        map_market = Map(
+            map_id="",
+            width=20,
+            height=15,
+            image_file="Omicho_market.png",  # 新しいマップ画像ファイル名
+            monsters=[],  # 敵を配置
+            facilities=[
+                # 兼六園に戻るポイント
+                {
+                    "name": "兼六園へ",
+                    "x": 2,
+                    "y": 14,
+                    "type": "transition",
+                    "target_map": "town",
+                    "target_x": 18,
+                    "target_y": 2,
+                },
             ],
         )
 
         # 複数マップは削除
         return {
             "town": map_town,
+            "castle": map_market,
         }
 
     def check_collision(self, x: int, y: int) -> Optional[Dict]:
