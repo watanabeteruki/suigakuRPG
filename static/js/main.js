@@ -323,6 +323,29 @@ async function initializeGame() {
         UIRenderer.switchScreen('map');
 
     });
+    
+    const mapGrid = document.getElementById('map-grid');
+    
+    mapGrid.addEventListener('click', (event) => {
+        // マップ全体のサイズと位置を取得
+        const rect = mapGrid.getBoundingClientRect();
+        
+        // クリックした位置 (px)
+        const clickX = event.clientX - rect.left;
+        const clickY = event.clientY - rect.top;
+
+        // 1マスのサイズを計算 (全体幅 ÷ 20, 全体高さ ÷ 15)
+        const cellWidth = rect.width / 20;
+        const cellHeight = rect.height / 15;
+
+        // 座標に変換 (0から始まる整数に)
+        const x = Math.floor(clickX / cellWidth);
+        const y = Math.floor(clickY / cellHeight);
+
+        // コンソールとアラートに表示
+        console.log(`この場所の座標: (${x}, ${y})`);
+        alert(`座標: x=${x}, y=${y}`); // 👈 ポップアップで教えてくれます
+    });
 
 
 

@@ -11,9 +11,10 @@ class GameController:
 
     def __init__(self):
         self.maps = Map.initialize_maps()
-        self.player = Player(start_x=4, start_y=8, map_id="town")
+        self.player = Player(start_x=0, start_y=8, map_id="town")
         self.current_map: Map = self.maps[self.player.current_map]
         self.current_battle: Optional[Monster] = None
+        self.current_question: Optional[Question] = None
 
     def _get_game_state(self) -> Dict:
         """
@@ -48,6 +49,12 @@ class GameController:
         map_width = self.current_map.width
         map_height = self.current_map.height
         if not (0 <= new_x < map_width and 0 <= new_y < map_height):
+            self.player.location_x, self.player.location_y = original_x, original_y
+            return {"status": "moved", "game_state": self._get_game_state()}
+
+        # 2. 【追加】 地形（池・障害物）との衝突判定
+        if self.current_map.is_blocked(new_x, new_y):
+            # 池なので移動をキャンセルして元の位置に戻す
             self.player.location_x, self.player.location_y = original_x, original_y
             return {"status": "moved", "game_state": self._get_game_state()}
 
@@ -94,13 +101,13 @@ class GameController:
         """
         戦闘画面に必要なデータを返す。
         """
-        question_obj = monster.get_question()
-        question_data = question_obj.to_dict()
+        self.current_question = monster.get_question()
+        question_data = self.current_question.to_dict()
 
         return {
             "status": "battle",
             "monster_name": monster.name,
-            "monster_hp": question_obj.damage_on_failure * 2,
+            "monster_hp": self.current_question.damage_on_failure * 2,
             "player_hp": self.player.hp,
             "question": question_data,
             "monster_image_file": monster.image_file,
@@ -126,12 +133,18 @@ class GameController:
             }
 
         if action == "たたかう" and answer is not None:
-            question = monster.get_question()
+
+            if not self.current_question:
+                # 万が一問題がない場合の安全策
+                self.current_question = monster.get_question()
+
+            question = self.current_question
             is_correct = question.check_answer(answer)
 
             if is_correct:
                 monster.is_defeated = True
                 self.current_battle = None
+                self.current_question = None
                 return {
                     "status": "battle_win",
                     "message": f"{question.problem_text}の答えは正解！{monster.name}を倒しました。",
@@ -167,7 +180,7 @@ class GameController:
         """
         ゲームの状態を初期化する (ゲームオーバー時)。
         """
-        self.player = Player(start_x=4, start_y=8, map_id="town")
+        self.player = Player(start_x=0, start_y=8, map_id="town")
 
         for map_instance in self.maps.values():
             for monster in map_instance.monsters.values():
