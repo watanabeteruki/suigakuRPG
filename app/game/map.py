@@ -1,3 +1,6 @@
+# app/game/map.py
+import json
+import os
 import random
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -20,13 +23,17 @@ class Question:
         return str(answer).strip() in self.correct_answers
 
     def to_dict(self) -> dict:
-        return {"monster_name": self.name, "problem_text": self.problem_text}
+        is_numeric = all(ans.isdigit() for ans in self.correct_answers)
+        return {
+            "monster_name": self.name,
+            "problem_text": self.problem_text,
+            "input_type": "number" if is_numeric else "text",
+        }
 
 
 class Monster:
     """マップ上のモンスターシンボルと、それに紐づく問題を管理するクラス。"""
 
-    # ▼ 変更: question(単体) ではなく questions(リスト) を受け取る
     def __init__(
         self, name: str, x: int, y: int, image_file: str, questions: List[Question]
     ):
@@ -34,12 +41,11 @@ class Monster:
         self.location_x = x
         self.location_y = y
         self.image_file = image_file
-        self.questions = questions  # 👈 リストとして保存
+        self.questions = questions
         self.is_defeated = False
         self.battle_start_point = (x, y)
 
     def get_question(self) -> Question:
-        # ▼ 変更: 戦闘開始のたびにリストからランダムに1問選んで返す
         return random.choice(self.questions)
 
 
@@ -67,49 +73,74 @@ class Map:
         self.blocked_cells = set()
         for y, row in enumerate(map_data):
             for x, cell_type in enumerate(row):
-                if cell_type == 1:  # 1番は「壁（池や木）」と決める
+                if cell_type == 1:
                     self.blocked_cells.add((x, y))
 
     def is_blocked(self, x: int, y: int) -> bool:
-        """指定された座標が通行禁止エリアかどうかを返す。"""
         return (x, y) in self.blocked_cells
 
     def get_safe_zones(self) -> List[Tuple[int, int]]:
         safe_spots = []
         for y, row in enumerate(self.map_data):
             for x, cell_type in enumerate(row):
-                # 0番(道) かつ 施設などがない場所
                 if cell_type == 0 and x > 6:
                     safe_spots.append((x, y))
         return safe_spots
+
+    # -------------------------------------------------------------
+    # ▼ 追加: JSONからマップを読み込むクラスメソッド
+    # -------------------------------------------------------------
+    @classmethod
+    def load_from_json(cls, filename: str) -> "Map":
+        """指定されたJSONファイルを読み込み、Mapインスタンスを生成して返す (モンスターは空の状態)"""
+
+        # このファイルの場所(app/game/)から、JSONのある場所(app/data/maps/)へのパスを作る
+        base_dir = os.path.dirname(__file__)  # app/game
+        json_path = os.path.join(
+            base_dir, "..", "data", "maps", filename
+        )  # app/data/maps/filename
+
+        # パスの正規化（..などを解決）
+        json_path = os.path.normpath(json_path)
+
+        if not os.path.exists(json_path):
+            raise FileNotFoundError(f"Map file not found: {json_path}")
+
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        return cls(
+            map_id=data["map_id"],
+            width=data["width"],
+            height=data["height"],
+            monsters=[],  # モンスターは後でコード側で追加する
+            facilities=data["facilities"],
+            image_file=data["image_file"],
+            map_data=data["map_data"],
+        )
+
+    # ... (check_collision, remove_monster メソッドは変更なし) ...
+    def check_collision(self, x: int, y: int) -> Optional[Dict]:
+        if (x, y) in self.monsters:
+            monster = self.monsters[(x, y)]
+            if not monster.is_defeated:
+                return {"type": "monster", "entity": monster}
+        for facility in self.facilities:
+            if facility["x"] == x and facility["y"] == y:
+                return {"type": "facility", "entity": facility}
+        return None
+
+    def remove_monster(self, monster: Monster):
+        if (monster.location_x, monster.location_y) in self.monsters:
+            self.monsters[(monster.location_x, monster.location_y)].is_defeated = True
 
     @staticmethod
     def initialize_maps():
         """初期マップデータを生成するファクトリメソッド。"""
 
-        town_data = [
-            # 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],  # 0
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],  # 1
-            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],  # 2
-            [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],  # 3
-            [1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1],  # 4
-            [1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1],  # 5
-            [1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0],  # 6
-            [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0],  # 7
-            [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0],  # 8
-            [1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],  # 9
-            [1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1],  # 10
-            [1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1],  # 11
-            [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],  # 12
-            [0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0],  # 13
-            [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # 14
-        ]
-
         # ---------------------------------------------------------
-        # ▼ 1. 問題プールの作成 (ここが今回の主役！)
+        # 1. 問題プールの作成 (ここは変更なし)
         # ---------------------------------------------------------
-
         math_questions_kids = [
             Question("さんすう", "1 + 1 は なあに？", "2", 1),
             Question("さんすう", "かたて の ゆび は なんぼん？", "5", 1),
@@ -166,41 +197,23 @@ class Map:
         mixed_pool = math_questions_kids + word_questions_kids + heart_questions_kids
 
         # ---------------------------------------------------------
-        # ▼ 5. マップ生成
+        # ▼ 2. マップロード (JSONから読み込み！)
         # ---------------------------------------------------------
-        map_town = Map(
-            map_id="town",
-            width=20,
-            height=15,
-            image_file="kenrokuen_map.png",
-            monsters=[],
-            facilities=[
-                {"name": "アイテム屋", "x": 12, "y": 5, "type": "service"},
-                {
-                    "name": "金沢城へ",
-                    "x": 18,
-                    "y": 1,
-                    "type": "transition",
-                    "target_map": "castle",
-                    "target_x": 2,
-                    "target_y": 13,
-                },
-                {
-                    "name": "金沢城へ",
-                    "x": 17,
-                    "y": 1,
-                    "type": "transition",
-                    "target_map": "castle",
-                    "target_x": 2,
-                    "target_y": 13,
-                },
-            ],
-            map_data=town_data,
-        )
+        map_town = Map.load_from_json("town.json")
+        map_market = Map.load_from_json("market.json")
+        map_castle = Map.load_from_json("castle.json")
 
+        # ---------------------------------------------------------
+        # ▼ 3. モンスター配置 (townマップのみ)
+        # ---------------------------------------------------------
+        # 安全地帯を取得 (Mapクラスのメソッドを活用)
         safe_zones = map_town.get_safe_zones()
 
-        spawn_points = random.sample(safe_zones, 2)
+        # ランダムに2箇所選ぶ
+        if len(safe_zones) >= 2:
+            spawn_points = random.sample(safe_zones, 2)
+        else:
+            spawn_points = [(10, 10), (11, 10)]  # フォールバック
 
         m1 = Monster(
             "ゴーレム",
@@ -217,54 +230,21 @@ class Map:
             questions=mixed_pool,
         )
 
-        # 配置が決まったので登録し直す
+        # モンスター辞書を更新 (初期化時には空だったため)
         map_town.monsters = {(m.location_x, m.location_y): m for m in [m1, m2]}
 
-        market_data = [[0] * 20 for _ in range(15)]
-        # 周りだけ壁にするなら...
-        for x in range(20):
-            market_data[0][x] = 1
-            market_data[14][x] = 1
-        for y in range(15):
-            market_data[y][0] = 1
-            market_data[y][19] = 1
-
-        map_market = Map(
-            map_id="castle",
-            width=20,
-            height=15,
-            image_file="Omicho_market.png",
-            monsters=[],
-            facilities=[
-                {
-                    "name": "兼六園へ",
-                    "x": 2,
-                    "y": 14,
-                    "type": "transition",
-                    "target_map": "town",
-                    "target_x": 18,
-                    "target_y": 2,
-                },
-            ],
-            map_data=market_data,
+        boss = Monster(
+            name="王様",
+            x=9,
+            y=10,
+            image_file="osama_boss.png",
+            questions=mixed_pool,  # 問題は既存のプールを使用（専用の問題リストを作ってもOK）
         )
+
+        map_castle.monsters = {(boss.location_x, boss.location_y): boss}
 
         return {
             "town": map_town,
-            "castle": map_market,
+            "market": map_market,  # 👈 追加
+            "castle": map_castle,
         }
-
-    # ... (以下のメソッドは変更なし) ...
-    def check_collision(self, x: int, y: int) -> Optional[Dict]:
-        if (x, y) in self.monsters:
-            monster = self.monsters[(x, y)]
-            if not monster.is_defeated:
-                return {"type": "monster", "entity": monster}
-        for facility in self.facilities:
-            if facility["x"] == x and facility["y"] == y:
-                return {"type": "facility", "entity": facility}
-        return None
-
-    def remove_monster(self, monster: Monster):
-        if (monster.location_x, monster.location_y) in self.monsters:
-            self.monsters[(monster.location_x, monster.location_y)].is_defeated = True

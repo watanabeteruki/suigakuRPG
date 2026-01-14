@@ -1,3 +1,4 @@
+# app/game/controller.py
 from typing import Dict, Optional
 
 from .map import Map, Monster, Question
@@ -52,9 +53,8 @@ class GameController:
             self.player.location_x, self.player.location_y = original_x, original_y
             return {"status": "moved", "game_state": self._get_game_state()}
 
-        # 2. 【追加】 地形（池・障害物）との衝突判定
+        # 地形（池・障害物）との衝突判定
         if self.current_map.is_blocked(new_x, new_y):
-            # 池なので移動をキャンセルして元の位置に戻す
             self.player.location_x, self.player.location_y = original_x, original_y
             return {"status": "moved", "game_state": self._get_game_state()}
 
@@ -94,6 +94,15 @@ class GameController:
 
                     # 4. 新しいマップの状態を返す
                     return {"status": "moved", "game_state": self._get_game_state()}
+
+                # ▼▼▼ 追加: ここがゴールの判定です！ ▼▼▼
+                elif entity.get("type") == "goal":
+                    return {
+                        "status": "game_clear",
+                        "message": "金沢城に到着！ゲームクリアおめでとう！",
+                        "game_state": self._get_game_state(),
+                    }
+                # ▲▲▲ 追加終わり ▲▲▲
 
         return {"status": "moved", "game_state": self._get_game_state()}
 
@@ -135,7 +144,6 @@ class GameController:
         if action == "たたかう" and answer is not None:
 
             if not self.current_question:
-                # 万が一問題がない場合の安全策
                 self.current_question = monster.get_question()
 
             question = self.current_question

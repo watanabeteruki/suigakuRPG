@@ -6,22 +6,33 @@ const UIRenderer = {
     mapGrid: document.getElementById('map-grid'),
 
     switchScreen(screenId) {
+        // すべての画面から active クラスを外す
         document.querySelectorAll('.screen').forEach(screen => {
             screen.classList.remove('active');
         });
         
-        // ▼ 修正: スタート画面のIDを削除 ▼
+        // 指定された画面を表示する
         if (screenId === 'map') {
             this.mapScreen.classList.add('active');
         } else if (screenId === 'battle') {
             this.battleScreen.classList.add('active');
-            // ▼ 修正: 古いUIに戻すため、戦闘コマンドを表示 ▼
             document.getElementById('battle-actions').style.display = 'block';
+        } 
+        // ▼▼▼ 追加: クリア画面とスタート画面の処理 ▼▼▼
+        else if (screenId === 'clear') {
+            document.getElementById('clear-screen').classList.add('active');
         }
+        else if (screenId === 'start') {
+            document.getElementById('start-screen').classList.add('active');
+        }
+        // ▲▲▲ 追加終わり ▲▲▲
         
-        // ▼ 修正: 戦闘が終わったらコマンドを隠す ▼
+        // 戦闘が終わったらコマンドを隠す
         if (screenId !== 'battle') {
-            document.getElementById('battle-actions').style.display = 'none';
+            const battleActions = document.getElementById('battle-actions');
+            if (battleActions) {
+                battleActions.style.display = 'none';
+            }
         }
     },
 
@@ -31,7 +42,6 @@ const UIRenderer = {
     },
 
     renderMap(gameState) {
-        // ▼ 修正: background_image を受け取らない ▼
         const { player, monsters, background_image } = gameState;
         
         this.updatePlayerStatus(player);
@@ -57,6 +67,11 @@ const UIRenderer = {
         monsters.forEach(m => {
             const monsterEl = document.createElement('div');
             monsterEl.className = 'monster-symbol';
+
+            // ▼▼▼ 追加: 名前が「王様」なら boss クラスを追加 ▼▼▼
+            if (m.name === '王様') {
+                monsterEl.classList.add('boss');
+            }
             
             const monsterImage = document.createElement('img');
             monsterImage.src = 'assets/' + m.image_file; 
@@ -66,8 +81,6 @@ const UIRenderer = {
             monsterEl.style.gridRowStart = m.y + 1;
             this.mapGrid.appendChild(monsterEl);
         });
-        
-        // ( 'switchScreen' は削除したまま )
     },
 
     renderBattle(battleData) {

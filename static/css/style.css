@@ -245,3 +245,87 @@ html, body {
     transform: translate(2px, 2px);
     box-shadow: 4px 4px 0px #000;
 }
+/* --- ゲームクリア画面 (リッチ版・ドット絵背景) --- */
+#clear-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 200;
+    
+    /* ▼▼▼ 変更: 背景画像をドット絵のクリア画像にする ▼▼▼ */
+    background-image: url('../assets/game_clear.png');
+    /* ▲▲▲ 変更終わり ▲▲▲ */
+
+    background-size: cover;
+    background-position: center;
+    
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+#clear-screen.active {
+    display: flex !important;
+}
+
+#clear-screen h2 {
+    font-size: 4em;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px orange;
+}
+
+#clear-screen p {
+    font-size: 1.5em;
+    color: white;
+    margin-bottom: 30px;
+}
+
+#back-to-title-button {
+    margin-top: 30px;
+    padding: 15px 30px;
+    font-size: 1.5em;
+    background-color: gold;
+    color: black;
+    border: 4px solid white;
+    cursor: pointer;
+    font-family: 'DotGothic16', sans-serif;
+}
+#back-to-title-button:hover {
+    background-color: orange;
+}
+div.monster-symbol.boss {
+    z-index: 50;
+    position: relative;
+    overflow: visible; /* マスからはみ出してもOK */
+}
+
+/* 2. 画像自体の設定 */
+/* 上記の枠の中にある img タグだけに効く書き方です */
+div.monster-symbol.boss {
+    z-index: 50;
+    position: relative;
+    overflow: visible; /* マスからはみ出してもOK */
+}
+
+/* 2. 画像自体の設定 */
+/* 上記の枠の中にある img タグだけに効く書き方です */
+/* --- ボス（王様）の特別サイズ設定 --- */
+.monster-symbol.boss {
+    /* 必要ならここにもスタイルを追加 */
+    z-index: 50; /* 他のキャラより手前に表示 */
+}
+
+.monster-symbol.boss img {
+    /* 通常(50px)の倍のサイズにする例 */
+    max-width: 120px; 
+    max-height: 120px;
+    
+    /* 位置調整 (マスからはみ出すので、少し上にずらすなど) */
+    transform: translateY(-20px); 
+    
+    /* ドット絵をくっきりさせる */
+    image-rendering: pixelated; 
+}
